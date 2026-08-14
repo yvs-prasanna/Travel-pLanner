@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JS → Python Model</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="./index.css">
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="module">
+        import React from "https://esm.sh/react@19.1.1/?dev";
+        import ReactDOMClient from "https://esm.sh/react-dom@19.1.1/client?dev";
+
+        function App() {
+            const [input, setInput] = React.useState("");
+            const [result, setResult] = React.useState("");
+            const [loading, setLoading] = React.useState(false);
+
+            async function executePythonModel() {
+                if (!input.trim()) {
+                    setResult("Please enter a value.");
+                    return;
+                }
+
+                setLoading(true);
+                setResult("");
+
+                try {
+                    const response = await fetch("http://127.0.0.1:8001/predict", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            user_input: input
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.detail || "Python server error");
+                    }
+
+
+                    // Assume data.result.content is the string you showed
+                    let rawContent = data.result.content;
+
+                    // Remove the ```json and ``` wrappers
+                    rawContent = rawContent.replace(/```json\n?/, "").replace(/```$/, "");
+
+                    // Parse into an object
+                    let parsed = JSON.parse(rawContent);
+
+                    setResult(parsed);
+                } catch (error) {
+                    setResult("Error: " + error.message);
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            return React.createElement(
+                "div",
+                { className: "max-w-xl mx-auto p-8" },
+                React.createElement(
+                    "h1",
+                    { className: "text-3xl font-bold text-blue-600 mb-6" },
+                    "JavaScript → Python Model"
+                ),
+                React.createElement(
+                    "input",
+                    {
+                        className: "w-full border rounded-lg p-3 mb-4",
+                        placeholder: "Enter something...",
+                        value: input,
+                        onChange: (event) => setInput(event.target.value)
+                    }
+                ),
+                React.createElement(
+                    "button",
+                    {
+                        className: "bg-blue-600 text-white px-5 py-3 rounded-lg font-semibold",
+                        onClick: executePythonModel,
+                        disabled: loading
+                    },
+                    loading ? "Running Python..." : "Execute Python Model"
+                ),
+                React.createElement(
+                    "div",
+                    { className: "mt-6 p-4 bg-gray-100 rounded-lg" },
+                    React.createElement(
+                        "p",
+                        { className: "font-semibold mb-2" },
+                        "Model Result:"
+                    ),
+                    React.createElement("h1", null, result.title || "No result yet."),
+                    React.createElement("p", null, result.content || "")
+                
+                )
+            );
+        }
+
+        const root = ReactDOMClient.createRoot(
+            document.getElementById("root")
+        );
+
+        root.render(React.createElement(App));
+    </script>
+</body>
+</html>
